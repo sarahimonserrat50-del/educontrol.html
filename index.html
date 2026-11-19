@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduControl | Gestión Escolar</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #eef2ff; margin: 0; padding: 15px; color: #1e1b4b; }
+        .card { max-width: 740px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
+        h2 { color: #312e81; margin-top: 0; text-align: center; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat { background: #e0e7ff; padding: 10px; border-radius: 6px; text-align: center; }
+        .stat strong { display: block; font-size: 18px; color: #312e81; }
+        .form-row { display: grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        @media (max-width: 600px) { .form-row, .stats { grid-template-columns: 1fr; } }
+        label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 3px; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #c7d2fe; border-radius: 4px; box-sizing: border-box; }
+        button { background: #4338ca; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { border: 1px solid #e0e7ff; padding: 8px; text-align: left; }
+        th { background: #312e81; color: white; }
+        .badge { padding: 3px 7px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+        .pres { background: #dcfce7; color: #166534; }
+        .falt { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>🎓 EduControl: Asistencia y Evaluaciones</h2>
+    <div class="stats">
+        <div class="stat"><strong id="stAlumnos">0</strong><small>Total Alumnos</small></div>
+        <div class="stat"><strong id="stPromedio">0.0</strong><small>Promedio Grupal</small></div>
+        <div class="stat"><strong id="stAsistencia">0%</strong><small>Índice Asistencia</small></div>
+    </div>
+
+    <div class="form-row">
+        <div><label>Matrícula:</label><input type="text" id="mat" placeholder="2650201"></div>
+        <div><label>Nombre Completo:</label><input type="text" id="nom" placeholder="Ana Sofía Ruiz"></div>
+        <div><label>Calif (0-10):</label><input type="number" id="cal" min="0" max="10" step="0.1" placeholder="9.5"></div>
+        <div><label>Asistencia:</label>
+            <select id="asi">
+                <option value="Presente">Presente</option>
+                <option value="Falta">Falta</option>
+            </select>
+        </div>
+    </div>
+    <button onclick="registrarAlumno()">+ Guardar Registro Escolar</button>
+
+    <table>
+        <thead>
+            <tr><th>Matrícula</th><th>Alumno</th><th>Calificación</th><th>Estatus</th><th>Asistencia</th><th>Acción</th></tr>
+        </thead>
+        <tbody id="tablaEdu"></tbody>
+    </table>
+</div>
+
+<script>
+    function getEdu() { return JSON.parse(localStorage.getItem("educontrol_502")) || []; }
+    function setEdu(d) { localStorage.setItem("educontrol_502", JSON.stringify(d)); }
+
+    function registrarAlumno() {
+        const mat = document.getElementById("mat").value.trim();
+        const nom = document.getElementById("nom").value.trim();
+        const cal = parseFloat(document.getElementById("cal").value);
+        const asi = document.getElementById("asi").value;
+
+        if (!mat || !nom || isNaN(cal) || cal < 0 || cal > 10) {
+            alert("⚠️ Verifique matrícula, nombre y calificación válida (0 a 10).");
+            return;
+        }
+
+        let lista = getEdu();
+        lista.push({ mat, nom, cal, asi });
+        setEdu(lista);
+
+        document.getElementById("mat").value = "";
+        document.getElementById("nom").value = "";
+        document.getElementById("cal").value = "";
+        renderEdu();
+    }
+
+    function borrarRegistro(idx) {
+        let lista = getEdu();
+        lista.splice(idx, 1);
+        setEdu(lista);
+        renderEdu();
+    }
+
+    function renderEdu() {
+        const lista = getEdu();
+        const tbody = document.getElementById("tablaEdu");
+        tbody.innerHTML = "";
+
+        let sumaCal = 0, presentes = 0;
+
+        lista.forEach((a, i) => {
+            sumaCal += a.cal;
+            if (a.asi === "Presente") presentes++;
+            const aprobado = a.cal >= 6 ? "✅ Aprobado" : "❌ Reprobado";
+            tbody.innerHTML += `
+                <tr>
+                    <td>${a.mat}</td>
+                    <td>${a.nom}</td>
+                    <td><strong>${a.cal.toFixed(1)}</strong></td>
+                    <td>${aprobado}</td>
+                    <td><span class="badge ${a.asi === 'Presente' ? 'pres' : 'falt'}">${a.asi}</span></td>
+                    <td><button onclick="borrarRegistro(${i})" style="background:#dc2626; padding:4px 8px; width:auto;">X</button></td>
+                </tr>`;
+        });
+
+        document.getElementById("stAlumnos").innerText = lista.length;
+        document.getElementById("stPromedio").innerText = lista.length ? (sumaCal / lista.length).toFixed(1) : "0.0";
+        document.getElementById("stAsistencia").innerText = lista.length ? Math.round((presentes / lista.length) * 100) + "%" : "0%";
+    }
+    renderEdu();
+</script>
+</body>
+</html>
